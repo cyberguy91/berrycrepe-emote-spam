@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>BerryCrepe Emote Spam Tool</title>
+    <style>
+        :root { --bg: #0e0e10; --card: #18181b; --accent: #9147ff; --text: #efeff1; --delete: #eb0400; }
+        body { font-family: 'Inter', sans-serif; background: #070708; color: var(--text); padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        
+        .dashboard { background: var(--bg); padding: 25px; border-radius: 12px; border: 1px solid #303032; width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { color: var(--accent); margin: 0 0 20px 0; font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; text-align: center;}
+
+        .emote-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 25px; }
+        .emote-slot { 
+            background: var(--card); border: 2px solid transparent; 
+            border-radius: 6px; cursor: pointer; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; padding: 8px;
+            transition: all 0.2s; position: relative; gap: 5px;
+        }
+        .emote-slot:hover { border-color: #555; background: #202023; }
+        .emote-slot.active { border-color: var(--accent); background: #261545; }
+        .emote-slot img { width: 28px; height: 28px; object-fit: contain; image-rendering: pixelated; }
+        .emote-slot span { font-size: 0.7rem; font-weight: bold; color: #adadb8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; text-align: center; }
+        
+        .del-btn { position: absolute; top: -5px; right: -5px; background: var(--delete); color: white; border: none; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; cursor: pointer; display: none; align-items: center; justify-content: center; z-index: 10; }
+        .emote-slot:hover .del-btn { display: flex; }
+
+        .controls { display: flex; flex-direction: column; gap: 15px; border-top: 1px solid #303032; padding-top: 20px;}
+        .input-group { display: flex; flex-direction: column; gap: 8px; }
+        label { font-size: 0.8rem; color: #adadb8; font-weight: bold; }
+        
+        .field-hint {
+            font-size: 0.8rem;
+            color: #888;
+            margin-top: -5px;
+            margin-bottom: 10px;
+        }
+        
+        .field-hint a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        .field-hint a:hover {
+            text-decoration: underline;
+        }
+        
+        input { background: #1f1f23; color: white; border: 1px solid #303032; padding: 12px; border-radius: 4px; outline: none; font-size: 1.1rem; text-align: center;}
+        
+        .quick-btns { display: flex; gap: 5px; }
+        .quick-btns button { flex: 1; background: #2f2f35; border: none; color: white; padding: 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; font-weight: bold; }
+        .quick-btns button:hover { background: #44444a; }
+
+        #copy-btn { background: var(--accent); color: white; border: none; padding: 14px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        
+        .maintenance { margin-top: 20px; padding: 15px; background: #1f1f23; border-radius: 8px; width: 500px; box-sizing: border-box; border: 1px dashed #444;}
+        .maintenance summary { font-size: 0.8rem; cursor: pointer; color: #adadb8; outline: none; }
+        .maintenance input { width: 100%; margin: 10px 0; box-sizing: border-box; text-align: left; font-size: 0.9rem;}
+        .save-file-btn { background: #00c853; color: black; border: none; padding: 12px; width: 100%; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 15px; font-size: 0.9rem;}
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+    <h2>BerryCrepe Emote Spam Tool</h2>
+    <div class="emote-grid" id="emote-picker"></div>
+
+    <div class="controls">
+        <div class="input-group">
+            <label id="selected-label">Selected: None</label>
+            <input type="number" id="count" value="0" min="0">
+            <div class="quick-btns">
+                <button onclick="adjustCount(1)">+1</button>
+                <button onclick="adjustCount(5)">+5</button>
+                <button onclick="adjustCount(10)">+10</button>
+                <button onclick="adjustCount(25)">+25</button>
+                <button style="background:#3a3a3d" onclick="resetCount()">Reset</button>
+            </div>
+        </div>
+        <button id="copy-btn">Copy (Enter)</button>
+        <div class="hotkey-hint">
+            Hotkeys: [1] +1 | [2] +5 | [3] +10 | [4] +25 | [0] Reset | [Enter] Copy
+        </div>
+    </div>
+</div>
+
+<details class="maintenance">
+    <summary>Maintenance Tools</summary>
+    <div style="margin-top:10px;">
+        <label>Add New Emote:</label>
+        <input type="text" id="new-name" placeholder="Emote Name">
+        <input type="text" id="new-url" placeholder="GIF URL">
+        <p class="field-hint">
+            You can find the GIF URL either using
+            <a href="https://twitchemotes.com/channels/188548235" target="_blank" rel="noopener">twitchemotes.com</a>
+            or by right-clicking an emote in Twitch chat and "Copy Image Link" or similar.<br>
+            If you use Chatterino, you can right-click an emote in chat and select "Copy -> 1x link".<br>
+            <i>Note that using the emotes outside of Twitch may technically be against TOS.</i></p>
+        <button class="quick-btns" style="width:100%; padding:10px; background:var(--accent); color:white; border-radius:4px; border:none; cursor:pointer;" onclick="addEmote()">Add to Grid</button>
+        
+        <hr style="border:0; border-top:1px solid #444; margin:15px 0;">
+        <label>Permanently Save Layout:</label>
+        <p style="font-size:0.7rem; color:#888; margin-top:5px;">This will download a new <b>berrycrepe-emote-spam.html</b> file with all current emotes hardcoded into the source code.</p>
+        <button class="save-file-btn" onclick="downloadUpdatedFile()">Download Updated File</button>
+    </div>
+</details>
+
+<script id="main-logic">
+    // START_CONFIG
+    const hardcodedEmotes = [
+        { name: "crepeYay", url: "https://static-cdn.jtvnw.net/emoticons/v2/emotesv2_8107e9c9e58349dc8691e4569cead96e/animated/light/3.0" },
+    ];
+    // END_CONFIG
+
+    let customEmotes = JSON.parse(localStorage.getItem('customEmotes')) || [];
+    let selectedEmote = hardcodedEmotes[0]?.name || "";
+    const countInput = document.getElementById('count');
+
+    function renderGrid() {
+        const picker = document.getElementById('emote-picker');
+        picker.innerHTML = '';
+        const allEmotes = [...hardcodedEmotes, ...customEmotes];
+        
+        allEmotes.forEach((emote, index) => {
+            const isCustom = index >= hardcodedEmotes.length;
+            const slot = document.createElement('div');
+            slot.className = `emote-slot ${emote.name === selectedEmote ? 'active' : ''}`;
+            slot.innerHTML = `<img src="${emote.url}"><span>${emote.name}</span>`;
+
+            if (isCustom) {
+                const del = document.createElement('button');
+                del.className = 'del-btn'; del.innerHTML = '×';
+                del.onclick = (e) => { e.stopPropagation(); deleteEmote(index - hardcodedEmotes.length); };
+                slot.appendChild(del);
+            }
+            
+            slot.onclick = () => {
+                selectedEmote = emote.name;
+                document.getElementById('selected-label').textContent = `Selected: ${emote.name}`;
+                renderGrid();
+            };
+            picker.appendChild(slot);
+        });
+    }
+
+    function adjustCount(amount) { countInput.value = (parseInt(countInput.value) || 0) + amount; }
+    function resetCount() { countInput.value = 0; }
+
+    function copyToClipboard() {
+        if (!selectedEmote || countInput.value <= 0) return;
+        const finalString = (selectedEmote + " ").repeat(countInput.value).trim();
+        navigator.clipboard.writeText(finalString);
+        const btn = document.getElementById('copy-btn');
+        btn.textContent = "COPIED!";
+        btn.style.background = "#00c853";
+        setTimeout(() => { btn.textContent = "Copy (Enter)"; btn.style.background = ""; }, 800);
+    }
+
+    function addEmote() {
+        const name = document.getElementById('new-name').value.trim();
+        const url = document.getElementById('new-url').value.trim();
+        if (name && url) {
+            customEmotes.push({ name, url });
+            localStorage.setItem('customEmotes', JSON.stringify(customEmotes));
+            renderGrid();
+            document.getElementById('new-name').value = '';
+            document.getElementById('new-url').value = '';
+        }
+    }
+
+    function deleteEmote(idx) {
+        customEmotes.splice(idx, 1);
+        localStorage.setItem('customEmotes', JSON.stringify(customEmotes));
+        renderGrid();
+    }
+
+    function downloadUpdatedFile() {
+        const allEmotes = [...hardcodedEmotes, ...customEmotes];
+        
+        // 1. Get the current HTML
+        let currentHtml = document.documentElement.outerHTML;
+        
+        // 2. FORCE REMOVE the "open" attribute from the maintenance section
+        // This ensures the new file always starts with the menu closed.
+        currentHtml = currentHtml.replace('<details class="maintenance" open="">', '<details class="maintenance">');
+        currentHtml = currentHtml.replace('<details class="maintenance" open>', '<details class="maintenance">');
+
+        // 3. Inject the new hardcoded list
+        const newConfig = `// START_CONFIG\n    const hardcodedEmotes = ${JSON.stringify(allEmotes, null, 8)};\n    // END_CONFIG`;
+        const updatedHtml = currentHtml.replace(/\/\/ START_CONFIG[\s\S]*?\/\/ END_CONFIG/, newConfig);
+        
+        // 4. Reset customEmotes for the new file
+        const finalHtml = updatedHtml.replace(/let customEmotes = JSON\.parse\(localStorage\.getItem\('customEmotes'\)\) \|\| \[\];/, "let customEmotes = [];");
+
+        const blob = new Blob([finalHtml], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'berrycrepe-emote-spam.html'; // Changed to index.html for easier GitHub hosting!
+        a.click();
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (e.target.tagName === 'INPUT') return;
+        if (e.key === '1') adjustCount(1);
+        if (e.key === '2') adjustCount(5);
+        if (e.key === '3') adjustCount(10);
+        if (e.key === '4') adjustCount(25);
+        if (e.key === '0') resetCount();
+        if (e.key === 'Enter') copyToClipboard();
+    });
+
+    document.getElementById('copy-btn').onclick = copyToClipboard;
+    renderGrid();
+    document.getElementById('selected-label').textContent = `Selected: ${selectedEmote}`;
+</script>
+
+</body>
+</html>
